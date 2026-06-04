@@ -79,7 +79,6 @@
   .src{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint);margin-top:9px;line-height:1.5;display:none;}
   .src.show{display:block;}
   .src .err{color:var(--up);}
-  .src .lock{color:var(--gold);}
   .diag{display:none;margin:10px 4px 0;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;
     background:var(--panel);font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.6;
     color:var(--muted);white-space:pre-wrap;word-break:break-all;}
@@ -120,7 +119,7 @@
   <div class="card reveal">
     <div class="row">
       <div class="row-main">
-        <div><div class="name">美股</div><div class="sub">80% QQQ · 20% VOO · 凌晨收盘(锁定)</div></div>
+        <div><div class="name">美股</div><div class="sub">80% QQQ · 20% VOO · 最近一次收盘</div></div>
         <div class="field"><input id="rx" type="number" inputmode="decimal" step="0.01" placeholder="—"><span class="suffix">%</span></div>
       </div>
       <div class="src" id="srcx"></div>
@@ -134,7 +133,7 @@
     </div>
     <div class="row">
       <div class="row-main">
-        <div><div class="name">黄金</div><div class="sub">AU9999 · 下午3:30收盘(锁定至次日)</div></div>
+        <div><div class="name">黄金</div><div class="sub">AU9999 · 取当日 15:30 收盘（日K）</div></div>
         <div class="field"><input id="rz" type="number" inputmode="decimal" step="0.01" placeholder="—"><span class="suffix">%</span></div>
       </div>
       <div class="src" id="srcz"></div>
@@ -164,7 +163,7 @@
 
   <p class="note reveal">
     红涨绿跌 · 仅为粗略估算，实际以支付宝到账为准<br>
-    收盘值按日锁定，夜盘/美股盘中不再覆盖，午夜跨日重置
+    取自东方财富日K收盘价，夜盘/盘中不影响 · 打开即自动获取
   </p>
 
 </div>
@@ -174,13 +173,13 @@
   var $ = function(id){ return document.getElementById(id); };
   var rx=$('rx'), ry=$('ry'), rz=$('rz'), vx=$('vx'), vy=$('vy'), vz=$('vz');
 
-  /* 数据源 + 收盘时间窗(北京时间)
-     win 决定“当节已收盘、可锁定”的窗口：
-       gold 15:30–20:00(夜盘前) · us 04:30–21:30(美股开盘前) · cn 15:00 起 */
+  /* 数据源 + 取哪根日K
+     mode 'today' = 日期≤今天的最新一根（黄金15:30 / A股15:00 收盘）
+     mode 'prev'  = 日期<今天的最新一根（美股凌晨那次收盘，排除盘中在建的当天那根） */
   var FEEDS = {
-    rx: { parts:[ {secid:'105.QQQ', w:0.8, win:'us'}, {secid:'107.VOO', w:0.2, win:'us'} ] },
-    ry: { parts:[ {secid:'2.931157', w:0.5, win:'cn'}, {secid:'0.980092', w:0.5, win:'cn'} ] },
-    rz: { parts:[ {secid:'118.AU9999', w:1, win:'gold'} ] }
+    rx: { parts:[ {secid:'105.QQQ', w:0.8, mode:'prev'}, {secid:'107.VOO', w:0.2, mode:'prev'} ] },
+    ry: { parts:[ {secid:'2.931157', w:0.5, mode:'today'}, {secid:'0.980092', w:0.5, mode:'today'} ] },
+    rz: { parts:[ {secid:'118.AU9999', w:1, mode:'today'} ] }
   };
 
   function pad(n){ return String(n).padStart(2,'0'); }
@@ -191,6 +190,7 @@
   function bgcls(n){ return n>0?'bg-up':(n<0?'bg-down':'bg-flat'); }
   function num(el){ var v=parseFloat(el.value); return isNaN(v)?0:v; }
   function round2(n){ return Math.round(n*100)/100; }
+  function dateStr(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 
   var d0=new Date();
   $('date').innerHTML=(d0.getMonth()+1)+'月'+d0.getDate()+'日 <span class="wd">'+
@@ -210,21 +210,7 @@
     set('bx',px); set('by',py); set('bz',pz);
   }
 
-  /* 收盘窗口判断（北京时间，按设备本地时区） */
-  function isClean(win){
-    var d=new Date(), m=d.getHours()*60+d.getMinutes();
-    if(win==='gold') return m>=930 && m<1200;   // 15:30–20:00
-    if(win==='us')   return m>=270 && m<1290;    // 04:30–21:30
-    return m>=900;                                // cn: 15:00 起
-  }
-
-  /* 按日锁存（localStorage，键含日期，跨日自动失效） */
-  function dayKey(){ var d=new Date(); return ''+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate()); }
-  function snapKey(secid){ return 'snap_'+secid+'_'+dayKey(); }
-  function getSnap(secid){ try{ return JSON.parse(localStorage.getItem(snapKey(secid))); }catch(e){ return null; } }
-  function setSnap(secid,o){ try{ localStorage.setItem(snapKey(secid), JSON.stringify(o)); }catch(e){} }
-
-  /* 抓取（直连 → 代理 → JSONP），含诊断日志 */
+  /* 抓日K（直连 → 代理 → JSONP），含诊断日志 */
   var UT='fa5fd1943c7b386f172d6893dbfba10b';
   var PROXIES = [
     function(u){ return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u); },
@@ -232,20 +218,20 @@
     function(u){ return 'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u); }
   ];
   function buildUrl(secid){
-    return 'https://push2.eastmoney.com/api/qt/stock/get?ut='+UT+
-           '&fltt=2&invt=2&fields=f43,f58,f170,f169&secid='+secid;
+    return 'https://push2his.eastmoney.com/api/qt/stock/kline/get?ut='+UT+
+      '&fields1=f1,f2,f3,f4,f5,f6'+
+      '&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61'+
+      '&klt=101&fqt=0&end=20500101&lmt=10&secid='+secid;
   }
-  function parseQ(obj){
-    if(!obj || !obj.data) throw new Error('no data');
-    var pct=Number(obj.data.f170);
-    if(!isFinite(pct)) throw new Error('bad pct');
-    return { name:obj.data.f58, pct:pct };
+  function parseK(obj){
+    if(!obj || !obj.data || !obj.data.klines || !obj.data.klines.length) throw new Error('no kline');
+    return { name:obj.data.name, klines:obj.data.klines };
   }
   function jsonp(url){
     return new Promise(function(resolve,reject){
       var cb='jp_'+Math.random().toString(36).slice(2);
       var s=document.createElement('script');
-      var t=setTimeout(function(){ cleanup(); reject(new Error('超时')); },4000);
+      var t=setTimeout(function(){ cleanup(); reject(new Error('超时')); },5000);
       function cleanup(){ try{ delete window[cb]; }catch(e){ window[cb]=undefined; } s.remove(); clearTimeout(t); }
       window[cb]=function(data){ cleanup(); resolve(data); };
       s.onerror=function(){ cleanup(); reject(new Error('脚本被拦')); };
@@ -253,45 +239,50 @@
       document.body.appendChild(s);
     });
   }
-  async function fetchOne(secid, log){
+  async function fetchK(secid, log){
     var url=buildUrl(secid);
-    try{ var r0=await fetch(url,{cache:'no-store'}); var o0=await r0.json(); log(secid+'  直连 ✓'); return parseQ(o0); }
+    try{ var r0=await fetch(url,{cache:'no-store'}); var o0=await r0.json(); log(secid+'  直连 ✓'); return parseK(o0); }
     catch(e){ log(secid+'  直连 ✗ '+e.message); }
     for(var i=0;i<PROXIES.length;i++){
       try{
         var r=await fetch(PROXIES[i](url),{cache:'no-store'});
         var txt=await r.text(); var obj=JSON.parse(txt);
-        log(secid+'  代理'+(i+1)+' ✓'); return parseQ(obj);
+        log(secid+'  代理'+(i+1)+' ✓'); return parseK(obj);
       }catch(e){ log(secid+'  代理'+(i+1)+' ✗ '+e.message); }
     }
-    try{ var oj=await jsonp(url); log(secid+'  JSONP ✓'); return parseQ(oj); }
+    try{ var oj=await jsonp(url); log(secid+'  JSONP ✓'); return parseK(oj); }
     catch(e){ log(secid+'  JSONP ✗ '+e.message); }
     throw new Error('all failed '+secid);
   }
 
-  /* 单标的取值：窗内→实时并锁存；窗外→优先用今日锁存；无锁存→盘中实时(标⚠) */
+  /* 从K线里挑目标那根（与返回顺序无关，按日期取最大者） */
+  function pickBar(klines, mode, todayStr){
+    var chosen=null, cd='';
+    for(var i=0;i<klines.length;i++){
+      var p=klines[i].split(',');
+      var date=p[0];
+      var ok = (mode==='prev') ? (date<todayStr) : (date<=todayStr);
+      if(ok && date>cd){ chosen=p; cd=date; }
+    }
+    return chosen; // [date,open,close,high,low,vol,amt,amp,pct,chg,turn]
+  }
+
   async function resolvePart(part, log){
-    if(isClean(part.win)){
-      var r=await fetchOne(part.secid, log);
-      setSnap(part.secid, {pct:r.pct, name:r.name});
-      return { name:r.name, pct:r.pct, w:part.w, lock:true };
-    }
-    var snap=getSnap(part.secid);
-    if(snap && isFinite(snap.pct)){
-      log(part.secid+'  用今日收盘锁存 ✓');
-      return { name:snap.name, pct:snap.pct, w:part.w, lock:true };
-    }
-    var r2=await fetchOne(part.secid, log);
-    return { name:r2.name, pct:r2.pct, w:part.w, dirty:true };
+    var r=await fetchK(part.secid, log);
+    var bar=pickBar(r.klines, part.mode, dateStr(new Date()));
+    if(!bar) throw new Error('no bar '+part.secid);
+    var pct=Number(bar[8]);
+    if(!isFinite(pct)) throw new Error('bad pct '+part.secid);
+    return { name:r.name, pct:pct, w:part.w, date:bar[0] };
   }
 
   function showSrc(key, items){
     var el=$('src'+key.slice(1)); el.classList.add('show'); el.classList.remove('err');
     el.innerHTML=items.map(function(it){
       var c=cls(it.pct);
+      var dd = it.date ? ' <span style="color:var(--faint)">'+it.date.slice(5)+'</span>' : '';
       var wtxt = items.length>1 ? ' <span style="color:var(--faint)">×'+Math.round(it.w*100)+'</span>' : '';
-      var tag = it.dirty ? ' <span class="err">⚠盘中</span>' : (it.lock ? ' <span class="lock">🔒</span>' : '');
-      return it.name+' <span class="'+c+'">'+(it.pct>0?'+':'')+fmt(it.pct)+'%</span>'+wtxt+tag;
+      return it.name+dd+' <span class="'+c+'">'+(it.pct>0?'+':'')+fmt(it.pct)+'%</span>'+wtxt;
     }).join(' &nbsp;·&nbsp; ');
   }
   function showErr(key, msg){
@@ -303,17 +294,6 @@
     showSrc(key, items);
   }
 
-  /* 开页：用今日锁存回填，免得刷新后又变空 */
-  function restoreFromSnaps(){
-    ['rx','ry','rz'].forEach(function(key){
-      var parts=FEEDS[key].parts;
-      var snaps=parts.map(function(p){ return getSnap(p.secid); });
-      if(snaps.every(function(s){ return s && isFinite(s.pct); })){
-        fillKey(key, snaps.map(function(s,i){ return {name:s.name, pct:s.pct, w:parts[i].w, lock:true}; }));
-      }
-    });
-  }
-
   var busy=false;
   function mkLog(){ var lines=[], el=$('diag');
     return function(m){ lines.push(m); el.textContent=lines.join('\n'); el.classList.add('show'); }; }
@@ -321,18 +301,17 @@
     if(busy) return; busy=true;
     var btn=$('fetchBtn'); btn.classList.add('loading'); btn.disabled=true;
     $('fetchStatus').textContent='正在获取行情…';
-    var log=mkLog(), fail=false, dirty=false;
+    var log=mkLog(), fail=false;
     for(var i=0;i<3;i++){
       var key=['rx','ry','rz'][i], parts=FEEDS[key].parts;
       try{
         var items=await Promise.all(parts.map(function(p){ return resolvePart(p, log); }));
-        if(items.some(function(it){ return it.dirty; })) dirty=true;
         fillKey(key, items);
       }catch(e){ fail=true; showErr(key); }
     }
     compute();
-    var t=new Date(), tag=fail?'部分失败，见诊断':(dirty?'⚠含盘中实时(收盘未锁存)':'今日收盘已锁定');
-    $('fetchStatus').textContent='已更新 · '+pad(t.getHours())+':'+pad(t.getMinutes())+' · '+tag;
+    var t=new Date();
+    $('fetchStatus').textContent=(fail?'部分失败，见诊断':'已更新')+' · '+pad(t.getHours())+':'+pad(t.getMinutes());
     btn.classList.remove('loading'); btn.disabled=false; busy=false;
   }
 
@@ -349,8 +328,8 @@
   $('fetchBtn').addEventListener('click',autoFetch);
 
   loadBalances();
-  restoreFromSnaps();
   compute();
+  autoFetch();   // 打开即自动获取一次
 })();
 </script>
 </body>
