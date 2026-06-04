@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>今日收益估算</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#13110f; --panel:#1c1916; --panel-2:#221e1a; --line:#2e2a25;
+    --ink:#efe9e0; --muted:#8c8278; --faint:#5e564d; --gold:#c9a449;
+    --up:#ff5c5c; --down:#3fd08a;
+    --cjk:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{
+    background:
+      radial-gradient(120% 80% at 50% -10%, rgba(201,164,73,.10), transparent 60%),
+      radial-gradient(100% 60% at 100% 110%, rgba(63,208,138,.05), transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:var(--cjk); min-height:100vh;
+    padding:26px 18px 60px; -webkit-font-smoothing:antialiased;
+  }
+  .grain{position:fixed;inset:0;pointer-events:none;opacity:.035;z-index:99;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .wrap{max-width:460px;margin:0 auto;}
+  .reveal{animation:rise .6s cubic-bezier(.2,.7,.3,1) both;}
+  @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+  .date{font-family:'Fraunces',serif;font-size:30px;line-height:1.1;font-weight:400;letter-spacing:.01em;}
+  .date .wd{color:var(--muted);font-style:italic;font-size:20px;margin-left:6px;}
+
+  .hero{margin:26px 0 22px;padding:26px 22px 24px;border-radius:20px;
+    background:linear-gradient(160deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);box-shadow:0 18px 40px -24px #000;position:relative;overflow:hidden;}
+  .hero::before{content:"";position:absolute;top:-40%;right:-20%;width:60%;height:160%;
+    background:radial-gradient(closest-side,rgba(201,164,73,.12),transparent);}
+  .hero .lab{font-size:12.5px;color:var(--muted);letter-spacing:.04em;}
+  .amt{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:46px;line-height:1.05;
+    margin:8px 0 2px;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+  .amt .unit{font-size:18px;color:var(--muted);font-weight:400;margin-left:4px;}
+  .rate-badge{display:inline-flex;align-items:center;gap:6px;margin-top:12px;
+    font-family:'IBM Plex Mono',monospace;font-size:14px;padding:5px 11px;border-radius:999px;
+    background:rgba(255,255,255,.04);border:1px solid var(--line);font-variant-numeric:tabular-nums;}
+  .rate-badge .dot{width:6px;height:6px;border-radius:50%;}
+
+  .up{color:var(--up);} .down{color:var(--down);} .flat{color:var(--muted);}
+  .bg-up{background:var(--up);} .bg-down{background:var(--down);} .bg-flat{background:var(--muted);}
+
+  .section-h{display:flex;align-items:center;justify-content:space-between;margin:24px 4px 12px;}
+  .section-h h2{font-family:'Fraunces',serif;font-weight:400;font-size:17px;letter-spacing:.02em;}
+  .section-h .hint{font-size:11px;color:var(--faint);}
+  .fetch-btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--cjk);font-size:12.5px;
+    color:var(--bg);background:var(--gold);border:none;padding:8px 14px;border-radius:999px;font-weight:600;cursor:pointer;}
+  .fetch-btn:active{filter:brightness(.92);}
+  .fetch-btn:disabled{opacity:.55;}
+  .fetch-btn.loading .ic{display:inline-block;animation:spin .8s linear infinite;}
+  .fetch-status{font-size:11.5px;color:var(--faint);margin:-4px 4px 10px;min-height:14px;
+    font-family:'IBM Plex Mono',monospace;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;}
+  .row{display:flex;flex-direction:column;padding:14px 16px;border-bottom:1px solid var(--line);}
+  .row:last-child{border-bottom:none;}
+  .row-main{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .row .name{font-size:15px;font-weight:500;}
+  .row .sub{font-size:11px;color:var(--faint);margin-top:3px;}
+  .field{display:flex;align-items:center;gap:4px;background:var(--bg);
+    border:1px solid var(--line);border-radius:10px;padding:6px 10px;min-width:104px;transition:border-color .15s;}
+  .field:focus-within{border-color:var(--gold);}
+  .field input{width:100%;background:none;border:none;outline:none;color:var(--ink);
+    font-family:'IBM Plex Mono',monospace;font-size:16px;text-align:right;font-variant-numeric:tabular-nums;}
+  .field .suffix{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted);flex:none;}
+  .src{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint);margin-top:9px;line-height:1.5;display:none;}
+  .src.show{display:block;}
+  .src .err{color:var(--up);}
+  .diag{display:none;margin:10px 4px 0;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;
+    background:var(--panel);font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.6;
+    color:var(--muted);white-space:pre-wrap;word-break:break-all;}
+  .diag.show{display:block;}
+
+  .bd{padding:6px 16px;}
+  .bd .l{display:flex;justify-content:space-between;align-items:center;padding:9px 0;
+    border-bottom:1px dashed var(--line);font-size:13.5px;}
+  .bd .l:last-child{border-bottom:none;}
+  .bd .l .k{color:var(--muted);}
+  .bd .l .v{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+
+  .note{margin-top:22px;font-size:11.5px;line-height:1.7;color:var(--faint);text-align:center;}
+  .reset{display:block;margin:14px auto 0;background:none;border:1px solid var(--line);
+    color:var(--muted);font-family:var(--cjk);font-size:12px;padding:7px 16px;border-radius:999px;cursor:pointer;}
+  .reset:active{background:var(--panel);}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="wrap">
+
+  <header class="reveal">
+    <div class="eyebrow">支付宝 · 收盘估算</div>
+    <div class="date" id="date"></div>
+  </header>
+
+  <section class="hero reveal">
+    <div class="lab">今日预计收益</div>
+    <div class="amt" id="total">—<span class="unit">元</span></div>
+    <div class="rate-badge" id="rateBadge"><span class="dot bg-flat"></span><span id="rate">—</span></div>
+  </section>
+
+  <div class="section-h reveal">
+    <h2>今日行情</h2>
+    <button class="fetch-btn" id="fetchBtn"><span class="ic">⟳</span> 一键获取</button>
+  </div>
+  <div class="fetch-status reveal" id="fetchStatus"></div>
+  <pre class="diag" id="diag"></pre>
+
+  <div class="card reveal">
+    <div class="row">
+      <div class="row-main">
+        <div><div class="name">美股</div><div class="sub">80% 纳指 · 20% 标普 · 凌晨收盘</div></div>
+        <div class="field"><input id="rx" type="number" inputmode="decimal" step="0.01"><span class="suffix">%</span></div>
+      </div>
+      <div class="src" id="srcx"></div>
+    </div>
+    <div class="row">
+      <div class="row-main">
+        <div><div class="name">红利现金流</div><div class="sub">931157 红利成长 · 980092 自由现金流 · 各半</div></div>
+        <div class="field"><input id="ry" type="number" inputmode="decimal" step="0.01"><span class="suffix">%</span></div>
+      </div>
+      <div class="src" id="srcy"></div>
+    </div>
+    <div class="row">
+      <div class="row-main">
+        <div><div class="name">黄金</div><div class="sub">AU9999 · 下午 3:30 收盘</div></div>
+        <div class="field"><input id="rz" type="number" inputmode="decimal" step="0.01"><span class="suffix">%</span></div>
+      </div>
+      <div class="src" id="srcz"></div>
+    </div>
+  </div>
+
+  <div class="section-h reveal">
+    <h2>持仓本金</h2><span class="hint">单位：万元 · 自动记住</span>
+  </div>
+  <div class="card reveal">
+    <div class="row"><div class="row-main"><div class="name">美股</div>
+      <div class="field"><input id="vx" type="number" inputmode="decimal" step="0.1"><span class="suffix">万</span></div></div></div>
+    <div class="row"><div class="row-main"><div class="name">红利现金流</div>
+      <div class="field"><input id="vy" type="number" inputmode="decimal" step="0.1"><span class="suffix">万</span></div></div></div>
+    <div class="row"><div class="row-main"><div class="name">黄金</div>
+      <div class="field"><input id="vz" type="number" inputmode="decimal" step="0.1"><span class="suffix">万</span></div></div></div>
+  </div>
+
+  <div class="section-h reveal">
+    <h2>分项贡献</h2><span class="hint">元</span>
+  </div>
+  <div class="card bd reveal">
+    <div class="l"><span class="k">美股</span><span class="v" id="bx">—</span></div>
+    <div class="l"><span class="k">红利现金流</span><span class="v" id="by">—</span></div>
+    <div class="l"><span class="k">黄金</span><span class="v" id="bz">—</span></div>
+  </div>
+
+  <p class="note reveal">
+    红涨绿跌 · 仅为粗略估算，实际以支付宝到账为准<br>
+    数据来自东方财富 · 在浏览器中打开即可一键获取
+  </p>
+  <button class="reset reveal" id="reset">重置本金为 50 / 40 / 50</button>
+
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var rx=$('rx'), ry=$('ry'), rz=$('rz'), vx=$('vx'), vy=$('vy'), vz=$('vz');
+  var DEFAULTS = { vx:50, vy:40, vz:50, rx:-0.26, ry:-1.3, rz:0.33 };
+
+  /* ---------- 工具函数 ---------- */
+  function fmt(n, dec){ if(dec===undefined) dec=2;
+    return n.toLocaleString('zh-CN',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
+  function signed(n){ return (n>0?'+':'')+fmt(n); }
+  function cls(n){ return n>0?'up':(n<0?'down':'flat'); }
+  function bgcls(n){ return n>0?'bg-up':(n<0?'bg-down':'bg-flat'); }
+  function num(el){ var v=parseFloat(el.value); return isNaN(v)?0:v; }
+  function round2(n){ return Math.round(n*100)/100; }
+
+  /* ---------- 日期 ---------- */
+  var d=new Date();
+  var wd=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  $('date').innerHTML=(d.getMonth()+1)+'月'+d.getDate()+'日 <span class="wd">'+wd+'</span>';
+
+  /* ---------- 计算 ---------- */
+  function compute(){
+    var px=num(vx)*num(rx)*100, py=num(vy)*num(ry)*100, pz=num(vz)*num(rz)*100;
+    var total=px+py+pz, sumV=num(vx)+num(vy)+num(vz);
+    var rate=sumV>0 ? total/(sumV*100) : 0;
+    var tEl=$('total'); tEl.className='amt '+cls(total);
+    tEl.innerHTML=signed(total)+'<span class="unit">元</span>';
+    $('rate').textContent=(rate>0?'+':'')+fmt(rate)+'%';
+    var badge=$('rateBadge');
+    badge.querySelector('span:last-child').className=cls(rate);
+    badge.querySelector('.dot').className='dot '+bgcls(rate);
+    function set(id,v){ var e=$(id); e.textContent=signed(v); e.className='v '+cls(v); }
+    set('bx',px); set('by',py); set('bz',pz);
+  }
+
+  /* ---------- 行情数据源（东方财富 secid，已核实） ----------
+     2.931157 中证沪港深红利成长低波动 · 0.980092 国证自由现金流
+     100.NDX 纳斯达克 · 100.SPX 标普500 · 118.AU9999 黄金9999
+     若某行抓到的名字不对，改这里对应 secid 即可 */
+  var FEEDS = {
+    rx: [ {secid:'100.NDX', w:0.8}, {secid:'100.SPX', w:0.2} ],
+    ry: [ {secid:'2.931157', w:0.5}, {secid:'0.980092', w:0.5} ],
+    rz: [ {secid:'118.AU9999', w:1} ]
+  };
+  var UT='fa5fd1943c7b386f172d6893dbfba10b';
+  function buildUrl(secid){
+    return 'https://push2.eastmoney.com/api/qt/stock/get?ut='+UT+
+           '&fltt=2&invt=2&fields=f43,f58,f170,f169&secid='+secid;
+  }
+  function parseQ(obj){
+    if(!obj || !obj.data) throw new Error('no data');
+    var pct=Number(obj.data.f170);
+    if(!isFinite(pct)) throw new Error('bad pct');
+    return { name:obj.data.f58, pct:pct };
+  }
+  var PROXIES = [
+    function(u){ return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u); },
+    function(u){ return 'https://corsproxy.io/?url='+encodeURIComponent(u); },
+    function(u){ return 'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u); }
+  ];
+  function jsonp(url){
+    return new Promise(function(resolve,reject){
+      var cb='jp_'+Math.random().toString(36).slice(2);
+      var s=document.createElement('script');
+      var t=setTimeout(function(){ cleanup(); reject(new Error('超时')); },4000);
+      function cleanup(){ try{ delete window[cb]; }catch(e){ window[cb]=undefined; } s.remove(); clearTimeout(t); }
+      window[cb]=function(data){ cleanup(); resolve(data); };
+      s.onerror=function(){ cleanup(); reject(new Error('脚本被拦')); };
+      s.src=url+'&cb='+cb;
+      document.body.appendChild(s);
+    });
+  }
+  async function fetchOne(secid, log){
+    var url=buildUrl(secid);
+    try{ var r0=await fetch(url,{cache:'no-store'}); var o0=await r0.json(); log(secid+'  直连 ✓'); return parseQ(o0); }
+    catch(e){ log(secid+'  直连 ✗ '+e.message); }
+    for(var i=0;i<PROXIES.length;i++){
+      try{
+        var r=await fetch(PROXIES[i](url),{cache:'no-store'});
+        var txt=await r.text();
+        var obj=JSON.parse(txt);
+        log(secid+'  代理'+(i+1)+' ✓'); return parseQ(obj);
+      }catch(e){ log(secid+'  代理'+(i+1)+' ✗ '+e.message); }
+    }
+    try{ var oj=await jsonp(url); log(secid+'  JSONP ✓'); return parseQ(oj); }
+    catch(e){ log(secid+'  JSONP ✗ '+e.message); }
+    throw new Error('all failed '+secid);
+  }
+
+  function showSrc(key, items){
+    var el=$('src'+key.slice(1)); el.classList.add('show'); el.classList.remove('err');
+    el.innerHTML=items.map(function(it){
+      var c=cls(it.pct);
+      var wtxt = items.length>1 ? ' <span style="color:var(--faint)">×'+Math.round(it.w*100)+'</span>' : '';
+      return it.name+' <span class="'+c+'">'+(it.pct>0?'+':'')+fmt(it.pct)+'%</span>'+wtxt;
+    }).join(' &nbsp;·&nbsp; ');
+  }
+  function showErr(key, msg){
+    var el=$('src'+key.slice(1)); el.classList.add('show');
+    el.innerHTML='<span class="err">✕ '+(msg||'获取失败，请手填')+'</span>';
+  }
+
+  var busy=false;
+  function mkLog(){
+    var lines=[]; var el=$('diag');
+    return function(m){ lines.push(m); el.textContent=lines.join('\n'); el.classList.add('show'); };
+  }
+  async function autoFetch(){
+    if(busy) return; busy=true;
+    var btn=$('fetchBtn'); btn.classList.add('loading'); btn.disabled=true;
+    $('fetchStatus').textContent='正在获取行情…';
+    var log=mkLog();
+    var okAll=true;
+    for(var i=0;i<3;i++){
+      var key=['rx','ry','rz'][i];
+      var parts=FEEDS[key];
+      try{
+        var res=await Promise.all(parts.map(function(p){ return fetchOne(p.secid, log); }));
+        var items=res.map(function(r,j){ return {name:r.name, pct:r.pct, w:parts[j].w}; });
+        $(key).value=round2(items.reduce(function(s,it){ return s+it.pct*it.w; },0));
+        showSrc(key,items);
+      }catch(e){ okAll=false; showErr(key); }
+    }
+    compute();
+    var t=new Date();
+    var hh=String(t.getHours()).padStart(2,'0'), mm=String(t.getMinutes()).padStart(2,'0');
+    $('fetchStatus').textContent=(okAll?'已更新':'部分/全部失败，见下方诊断')+' · '+hh+':'+mm;
+    btn.classList.remove('loading'); btn.disabled=false; busy=false;
+  }
+
+  /* ---------- 本金本地持久化 ---------- */
+  var KEY='alipay_balances_v1';
+  function lsGet(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
+  function lsSet(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
+  async function loadBalances(){
+    var saved=null;
+    if(window.storage){ try{ var r=await window.storage.get(KEY,false); if(r&&r.value) saved=JSON.parse(r.value); }catch(e){} }
+    if(!saved) saved=lsGet();
+    vx.value = saved&&saved.vx!=null ? saved.vx : DEFAULTS.vx;
+    vy.value = saved&&saved.vy!=null ? saved.vy : DEFAULTS.vy;
+    vz.value = saved&&saved.vz!=null ? saved.vz : DEFAULTS.vz;
+  }
+  async function saveBalances(){
+    var o={vx:num(vx),vy:num(vy),vz:num(vz)};
+    lsSet(o);
+    if(window.storage){ try{ await window.storage.set(KEY, JSON.stringify(o), false); }catch(e){} }
+  }
+
+  /* ---------- 初始化 ---------- */
+  rx.value=DEFAULTS.rx; ry.value=DEFAULTS.ry; rz.value=DEFAULTS.rz;
+  [rx,ry,rz].forEach(function(el){ el.addEventListener('input',compute); });
+  [vx,vy,vz].forEach(function(el){ el.addEventListener('input',function(){ compute(); saveBalances(); }); });
+  $('fetchBtn').addEventListener('click',autoFetch);
+  $('reset').addEventListener('click',function(){
+    vx.value=DEFAULTS.vx; vy.value=DEFAULTS.vy; vz.value=DEFAULTS.vz; compute(); saveBalances();
+  });
+
+  vx.value=DEFAULTS.vx; vy.value=DEFAULTS.vy; vz.value=DEFAULTS.vz;
+  compute();
+  loadBalances().then(compute).catch(function(){ compute(); });
+})();
+</script>
+</body>
+</html>
