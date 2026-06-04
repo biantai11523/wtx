@@ -167,7 +167,6 @@
     红涨绿跌 · 仅为粗略估算，实际以支付宝到账为准<br>
     数据来自东方财富 · 在浏览器中打开即可一键获取
   </p>
-  <button class="reset reveal" id="reset">重置本金为 50 / 40 / 50</button>
 
 </div>
 
@@ -324,9 +323,7 @@
   [rx,ry,rz].forEach(function(el){ el.addEventListener('input',compute); });
   [vx,vy,vz].forEach(function(el){ el.addEventListener('input',function(){ compute(); saveBalances(); }); });
   $('fetchBtn').addEventListener('click',autoFetch);
-  $('reset').addEventListener('click',function(){
-    vx.value=DEFAULTS.vx; vy.value=DEFAULTS.vy; vz.value=DEFAULTS.vz; compute(); saveBalances();
-  });
+
 
   vx.value=DEFAULTS.vx; vy.value=DEFAULTS.vy; vz.value=DEFAULTS.vz;
   compute();
