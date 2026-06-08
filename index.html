@@ -166,7 +166,7 @@
   </div>
 
   <div class="section-h reveal">
-    <h2>今日分项</h2><span class="hint">元 · 最近一日</span>
+    <h2>今日分项</h2><span class="hint">元 · 今日实时</span>
   </div>
   <div class="card bd reveal">
     <div class="l"><span class="k">美股</span><span class="v" id="bx">—</span></div>
@@ -349,6 +349,8 @@
     $('rtRate').textContent=(rate>0?'+':'')+fmt(rate)+'%';
     $('rtBadge').querySelector('span:last-child').className=cls(rate);
     $('rtBadge').querySelector('.dot').className='dot '+bgcls(rate);
+    function setb(id,v){ v=v||0; var e=$(id); if(e){ e.textContent=signed(v); e.className='v '+cls(v); } }
+    setb('bx',(bal.vx||0)*100*pcts.rx); setb('by',(bal.vy||0)*100*pcts.ry); setb('bz',(bal.vz||0)*100*pcts.rz);
     function seg(nm,v,tag){ return nm+' <span class="'+cls(v)+'">'+(v>0?'+':'')+fmt(v)+'%</span> <span style="color:var(--faint)">'+tag+'</span>'; }
     $('rtSub').innerHTML = seg('美股',pcts.rx,'收盘')+' &nbsp;·&nbsp; '+seg('红利',pcts.ry,intraday?'盘中':'收盘')+' &nbsp;·&nbsp; '+seg('黄金',pcts.rz,intraday?'盘中':'收盘');
   }
