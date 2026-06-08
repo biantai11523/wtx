@@ -108,8 +108,15 @@
     <div class="date" id="date"></div>
   </header>
 
+  <section class="hero reveal" id="rtCard">
+    <div class="lab">今日实时收益 · 盘中仅查看</div>
+    <div class="amt" id="rtTotal">—<span class="unit">元</span></div>
+    <div class="rate-badge" id="rtBadge"><span class="dot bg-flat"></span><span id="rtRate">—</span></div>
+    <div class="since show" id="rtSub" style="color:var(--muted);border:none;padding-top:6px"></div>
+  </section>
+
   <section class="hero reveal">
-    <div class="lab">今日收益（最近一次收盘）</div>
+    <div class="lab">已结算入余额（收盘后）</div>
     <div class="amt" id="total">—<span class="unit">元</span></div>
     <div class="rate-badge" id="rateBadge"><span class="dot bg-flat"></span><span id="rate">—</span></div>
     <div class="since" id="since"></div>
@@ -294,11 +301,21 @@
     throw new Error('all failed '+secid);
   }
 
+  function buildLiveUrl(secid){ return 'https://push2.eastmoney.com/api/qt/stock/get?ut='+UT+'&fltt=2&invt=2&fields=f43,f58,f170,f169&secid='+secid; }
+  function parseLive(obj){ if(!obj||!obj.data) throw new Error('no live'); var p=Number(obj.data.f170); if(!isFinite(p)) throw new Error('bad live'); return {name:obj.data.f58, pct:p}; }
+  async function fetchLive(secid, log){
+    var url=buildLiveUrl(secid);
+    try{ var r0=await fetch(url,{cache:'no-store'}); var o=await r0.json(); var v=parseLive(o); if(log)log(secid+'  实时直连 ✓'); return v; }catch(e){}
+    for(var i=0;i<PROXIES.length;i++){ try{ var r=await fetch(PROXIES[i](url),{cache:'no-store'}); return parseLive(JSON.parse(await r.text())); }catch(e){} }
+    try{ return parseLive(await jsonp(url)); }catch(e){}
+    throw new Error('live fail '+secid);
+  }
+
   function showSrc(key, items){
     var el=$('src'+key.slice(1)); el.classList.add('show'); el.classList.remove('err');
     el.innerHTML=items.map(function(it){
       var c=cls(it.pct);
-      var dd = it.date ? ' <span style="color:var(--faint)">'+it.date.slice(5)+'</span>' : '';
+      var dd = it.tag ? ' <span style="color:var(--faint)">'+it.tag+'</span>' : (it.date ? ' <span style="color:var(--faint)">'+it.date.slice(5)+'</span>' : '');
       var wtxt = items.length>1 ? ' <span style="color:var(--faint)">×'+Math.round(it.w*100)+'</span>' : '';
       return it.name+dd+' <span class="'+c+'">'+(it.pct>0?'+':'')+fmt(it.pct)+'%</span>'+wtxt;
     }).join(' &nbsp;·&nbsp; ');
@@ -323,6 +340,17 @@
       s.classList.add('show');
       s.innerHTML='自 '+r.since+' 以来累计 <span class="v '+cls(r.cum)+'">'+signed(r.cum)+' 元</span> · 已并入本金'+(r.days?'（约'+r.days+'个交易日）':'');
     }else{ s.classList.remove('show'); s.innerHTML=''; }
+  }
+
+  function renderRealtime(total, pcts, intraday){
+    var sumBal=0; ['vx','vy','vz'].forEach(function(v){ if(bal[v]!=null) sumBal+=bal[v]; });
+    var el=$('rtTotal'); el.className='amt '+cls(total); el.innerHTML=signed(total)+'<span class="unit">元</span>';
+    var rate=sumBal>0?total/(sumBal*100):0;
+    $('rtRate').textContent=(rate>0?'+':'')+fmt(rate)+'%';
+    $('rtBadge').querySelector('span:last-child').className=cls(rate);
+    $('rtBadge').querySelector('.dot').className='dot '+bgcls(rate);
+    function seg(nm,v,tag){ return nm+' <span class="'+cls(v)+'">'+(v>0?'+':'')+fmt(v)+'%</span> <span style="color:var(--faint)">'+tag+'</span>'; }
+    $('rtSub').innerHTML = seg('美股',pcts.rx,'收盘')+' &nbsp;·&nbsp; '+seg('红利',pcts.ry,intraday?'盘中':'收盘')+' &nbsp;·&nbsp; '+seg('黄金',pcts.rz,intraday?'盘中':'收盘');
   }
 
   var busy=false;
@@ -360,6 +388,24 @@
       renderResult(result);
       $('fetchStatus').textContent=(out.fails.length?'部分失败，见诊断':'已更新')+' · '+tm;
     }
+    /* ===== 今日实时收益（盘中查看，不动余额）===== */
+    var liveIds=['2.931157','0.980092','118.AU9999'], live={};
+    await Promise.all(liveIds.map(async function(sid){ try{ live[sid]=await fetchLive(sid, log); }catch(e){ live[sid]=null; } }));
+    var rxLive = out.rowPct.rx!=null ? out.rowPct.rx : 0;                          // 美股：最近一个交易日收盘
+    var ryLive = (live['2.931157']&&live['0.980092']) ? (0.5*live['2.931157'].pct+0.5*live['0.980092'].pct) : (out.rowPct.ry!=null?out.rowPct.ry:0);
+    var rzLive = live['118.AU9999'] ? live['118.AU9999'].pct : (out.rowPct.rz!=null?out.rowPct.rz:0);
+    var rtTotal = (bal.vx||0)*100*rxLive + (bal.vy||0)*100*ryLive + (bal.vz||0)*100*rzLive;
+    renderRealtime(rtTotal, {rx:rxLive, ry:ryLive, rz:rzLive}, !todayComplete);
+    if(live['2.931157']&&live['0.980092']){
+      $('ry').value=fmt(ryLive);
+      showSrc('ry',[{name:live['2.931157'].name,pct:live['2.931157'].pct,w:0.5,tag:todayComplete?'收盘':'盘中'},
+                    {name:live['0.980092'].name,pct:live['0.980092'].pct,w:0.5,tag:todayComplete?'收盘':'盘中'}]);
+    }
+    if(live['118.AU9999']){
+      $('rz').value=fmt(rzLive);
+      showSrc('rz',[{name:live['118.AU9999'].name,pct:live['118.AU9999'].pct,w:1,tag:todayComplete?'收盘':'盘中'}]);
+    }
+
     btn.classList.remove('loading'); btn.disabled=false; busy=false;
   }
 
