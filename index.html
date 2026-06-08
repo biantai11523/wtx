@@ -169,7 +169,7 @@
 
   <p class="note reveal">
     红涨绿跌 · 仅为粗略估算，实际以支付宝到账为准<br>
-    美股最近收盘 · 黄金15:30 · 红利含港股约16:10 · 各自收盘后并入本金，每天一次
+    美股最近收盘 · 红利含港股约16:10 · 黄金取日盘15:30收盘(不计夜盘) · 各自收盘后并入
   </p>
 
 </div>
@@ -227,12 +227,15 @@
     if(!d) return null;
     return { pct:retMap[d], date:d, items:parts.map(function(p,i){ return {name:datas[i].name, pct:maps[i][d], w:p.w, date:d}; }) };
   }
-  // us: getUS 结果或 null；live: {secid:{name,pct}|null}；nowMin: 当前分钟数
-  function compute(us, live, principal, applied, today, nowMin){
+  // us: getUS 结果或 null；live: {secid:{name,pct}|null}；nowMin: 当前分钟；goldKPct: 黄金日K当天涨跌幅(或null)
+  function compute(us, live, principal, applied, today, nowMin, goldKPct){
+    var nightGuard = (nowMin>=1200 || nowMin<150);   // 20:00–次日02:30 黄金夜盘 → 实时报价是下一交易日，不能用
+    var goldPct = (goldKPct!=null) ? goldKPct                                   // 优先：日K当天(干净的日盘15:30收盘)
+                : (nightGuard ? null : (live['118.AU9999']?live['118.AU9999'].pct:null)); // 日K还没出且非夜盘 → 用实时顶一下
     var rows={
       rx:{ vkey:'vx', pct: us?us.pct:null,                                                              key: us?us.date:null, gate:true },          // 美股最近收盘，随时最终
       ry:{ vkey:'vy', pct: (live['2.931157']&&live['0.980092'])?(0.5*live['2.931157'].pct+0.5*live['0.980092'].pct):null, key:today, gate:nowMin>=970 }, // 红利含港股 → 16:10 港股收市竞价后
-      rz:{ vkey:'vz', pct: live['118.AU9999']?live['118.AU9999'].pct:null,                               key:today, gate:nowMin>=930 }  // 黄金 15:30 收盘
+      rz:{ vkey:'vz', pct: goldPct,                                                                     key:today, gate:nowMin>=930 }  // 黄金 15:30 日盘收盘
     };
     var out={ bal:Object.assign({},principal), applied:Object.assign({},applied),
               perPct:{}, perProfit:{}, total:0, banked:false };
@@ -355,30 +358,37 @@
     var hkClosed=nowMin>=970;        // 16:10 港股收市竞价后 → 红利全收盘
     var allFinal=hkClosed;           // 三块都定盘
 
-    var usIds=['105.QQQ','107.VOO'];
+    var klineIds=['105.QQQ','107.VOO','118.AU9999'];
     var liveIds=['2.931157','0.980092','118.AU9999'];
     var kres={}, live={};
     await Promise.all([
-      Promise.all(usIds.map(async function(sid){ try{ kres[sid]=await fetchK(sid, log); }catch(e){ kres[sid]=null; } })),
+      Promise.all(klineIds.map(async function(sid){ try{ kres[sid]=await fetchK(sid, log); }catch(e){ kres[sid]=null; } })),
       Promise.all(liveIds.map(async function(sid){ try{ live[sid]=await fetchLive(sid, log); }catch(e){ live[sid]=null; } }))
     ]);
     var us=getUS(kres);
+    var goldKPct=null;
+    if(kres['118.AU9999']){ var gm=klineMap(kres['118.AU9999'].klines); if(gm[today]!=null && isFinite(gm[today])) goldKPct=gm[today]; }
 
-    var out=compute(us, live, bal, applied, today, nowMin);
+    var out=compute(us, live, bal, applied, today, nowMin, goldKPct);
     bal=out.bal; applied=out.applied; saveJSON(BAL,bal); saveJSON(APP,applied);
 
     /* 今日行情 */
     if(us){ $('rx').value=fmt(us.pct); showSrc('rx', us.items); } else { showErr('rx'); }
-    var tagRy = hkClosed?'收盘':'盘中', tagRz = goldClosed?'收盘':'盘中';
+    var tagRy = hkClosed?'收盘':'盘中';
     if(live['2.931157']&&live['0.980092']){
       $('ry').value=fmt(out.perPct.ry);
       showSrc('ry',[{name:live['2.931157'].name,pct:live['2.931157'].pct,w:0.5,tag:tagRy},
                     {name:live['0.980092'].name,pct:live['0.980092'].pct,w:0.5,tag:tagRy}]);
     } else { showErr('ry'); }
-    if(live['118.AU9999']){
+    if(out.perPct.rz!=null){
       $('rz').value=fmt(out.perPct.rz);
-      showSrc('rz',[{name:live['118.AU9999'].name,pct:live['118.AU9999'].pct,w:1,tag:tagRz}]);
-    } else { showErr('rz'); }
+      var goldName=(live['118.AU9999']&&live['118.AU9999'].name)||'黄金9999';
+      var goldTag=(goldKPct!=null)?'日盘收盘':(goldClosed?'收盘':'盘中');
+      showSrc('rz',[{name:goldName,pct:out.perPct.rz,w:1,tag:goldTag}]);
+    } else {
+      var rz=$('srcz'); rz.classList.add('show'); rz.classList.remove('err');
+      rz.innerHTML='<span style="color:var(--faint)">夜盘时段 · 按当日日盘收盘计，不取夜盘</span>'; $('rz').value='—';
+    }
 
     ['vx','vy','vz'].forEach(function(v){ if(bal[v]!=null) $(v).value=bal[v].toFixed(2); });
 
