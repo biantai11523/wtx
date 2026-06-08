@@ -104,22 +104,15 @@
 <div class="wrap">
 
   <header class="reveal">
-    <div class="eyebrow">支付宝 · 收盘估算</div>
+    <div class="eyebrow">支付宝 · 实时估算</div>
     <div class="date" id="date"></div>
   </header>
 
-  <section class="hero reveal" id="rtCard">
-    <div class="lab">今日实时收益 · 盘中仅查看</div>
-    <div class="amt" id="rtTotal">—<span class="unit">元</span></div>
-    <div class="rate-badge" id="rtBadge"><span class="dot bg-flat"></span><span id="rtRate">—</span></div>
-    <div class="since show" id="rtSub" style="color:var(--muted);border:none;padding-top:6px"></div>
-  </section>
-
   <section class="hero reveal">
-    <div class="lab">已结算入余额（收盘后）</div>
+    <div class="lab" id="heroLab">今日收益</div>
     <div class="amt" id="total">—<span class="unit">元</span></div>
     <div class="rate-badge" id="rateBadge"><span class="dot bg-flat"></span><span id="rate">—</span></div>
-    <div class="since" id="since"></div>
+    <div class="since show" id="sub" style="color:var(--muted);border:none;padding-top:6px;line-height:1.7"></div>
   </section>
 
   <div class="section-h reveal">
@@ -139,14 +132,14 @@
     </div>
     <div class="row">
       <div class="row-main">
-        <div><div class="name">红利现金流</div><div class="sub">931157 红利成长 · 980092 自由现金流 · 各半</div></div>
+        <div><div class="name">红利现金流</div><div class="sub">931157 红利成长 · 980092 自由现金流 · 各半 · 含港股约16:10收盘</div></div>
         <div class="field"><input id="ry" type="text" inputmode="decimal" readonly placeholder="—"><span class="suffix">%</span></div>
       </div>
       <div class="src" id="srcy"></div>
     </div>
     <div class="row">
       <div class="row-main">
-        <div><div class="name">黄金</div><div class="sub">AU9999 · 当日 15:30 收盘</div></div>
+        <div><div class="name">黄金</div><div class="sub">AU9999 · 实时 / 15:30 收盘</div></div>
         <div class="field"><input id="rz" type="text" inputmode="decimal" readonly placeholder="—"><span class="suffix">%</span></div>
       </div>
       <div class="src" id="srcz"></div>
@@ -166,7 +159,7 @@
   </div>
 
   <div class="section-h reveal">
-    <h2>今日分项</h2><span class="hint">元 · 今日实时</span>
+    <h2>今日分项</h2><span class="hint">元 · 今日</span>
   </div>
   <div class="card bd reveal">
     <div class="l"><span class="k">美股</span><span class="v" id="bx">—</span></div>
@@ -176,7 +169,7 @@
 
   <p class="note reveal">
     红涨绿跌 · 仅为粗略估算，实际以支付宝到账为准<br>
-    日K收盘价复利滚入本金 · 同日不重复累加 · 缺勤自动补算
+    美股最近收盘 · 黄金15:30 · 红利含港股约16:10 · 各自收盘后并入本金，每天一次
   </p>
 
 </div>
@@ -212,50 +205,56 @@
   function saveJSON(k,o){ try{ localStorage.setItem(k, JSON.stringify(o)); }catch(e){} }
   var bal = loadJSON(BAL) || {};
   var applied = loadJSON(APP) || {};
+  ['rx','ry','rz'].forEach(function(k){ if(typeof applied[k]==='string') applied[k]={d:applied[k], p:null}; });
   var meta = loadJSON(META) || {lastSettle:null, lastResult:null};
 
-  /* 结算核心 */
+  /* 结算核心 —— 美股走日K最近收盘，红利/黄金走实时报价；盘后(15:30)并入本金，每天一次 */
   function klineMap(klines){ var m={}; for(var i=0;i<klines.length;i++){ var p=klines[i].split(','); m[p[0]]=Number(p[8]); } return m; }
-  function pickTargetDate(dates, mode, today, todayComplete){
-    var best=null;
-    for(var i=0;i<dates.length;i++){ var d=dates[i], ok;
-      if(mode==='prev') ok=d<today; else ok= todayComplete ? (d<=today) : (d<today);
-      if(ok && (best===null || d>best)) best=d; }
-    return best;
-  }
-  function settleAll(results, bal, applied, today, todayComplete){
-    var out={bal:Object.assign({},bal), applied:Object.assign({},applied),
-             totalToday:0, totalCum:0, maxDays:0, breakdown:{}, rowPct:{}, srcItems:{}, fails:[]};
-    ['rx','ry','rz'].forEach(function(rk){
-      var row=FEEDS[rk], parts=row.parts;
-      var datas=parts.map(function(p){ return results[p.secid]; });
-      if(datas.some(function(x){ return !x; })){ out.fails.push(rk); return; }
-      var maps=datas.map(function(x){ return klineMap(x.klines); });
-      var retMap={};
-      Object.keys(maps[0]).forEach(function(d){
-        var ok=true, r=0;
-        for(var i=0;i<maps.length;i++){ if(maps[i][d]==null || !isFinite(maps[i][d])){ ok=false; break; } r+=parts[i].w*maps[i][d]; }
-        if(ok) retMap[d]=r;
-      });
-      var dates=Object.keys(retMap).sort();
-      var tDate=pickTargetDate(dates, row.mode, today, todayComplete);
-      if(!tDate){ out.fails.push(rk); return; }
-      out.rowPct[rk]=retMap[tDate];
-      out.srcItems[rk]=parts.map(function(p,i){ return {name:datas[i].name, pct:maps[i][tDate], w:p.w, date:tDate}; });
-      if(out.bal[row.vkey]==null) return;             // 未设本金，不结算
-      var ap=out.applied[rk], applyDates;
-      if(ap==null) applyDates=[tDate];
-      else applyDates=dates.filter(function(d){ return d>ap && d<=tDate; });
-      var p=out.bal[row.vkey], rowToday=0;
-      applyDates.forEach(function(d){
-        var ret=retMap[d]/100, profit=p*10000*ret;
-        p=p+profit/10000; out.totalCum+=profit;
-        if(d===tDate) rowToday=profit;
-      });
-      if(applyDates.length>0){ out.bal[row.vkey]=round2(p); out.applied[rk]=tDate; }
-      out.maxDays=Math.max(out.maxDays, applyDates.length);
-      out.totalToday+=rowToday; out.breakdown[row.vkey]=rowToday;
+  function getUS(results){
+    var parts=FEEDS.rx.parts;
+    var datas=parts.map(function(p){ return results[p.secid]; });
+    if(datas.some(function(x){ return !x; })) return null;
+    var maps=datas.map(function(x){ return klineMap(x.klines); });
+    var retMap={};
+    Object.keys(maps[0]).forEach(function(d){
+      var ok=true, r=0;
+      for(var i=0;i<maps.length;i++){ if(maps[i][d]==null || !isFinite(maps[i][d])){ ok=false; break; } r+=parts[i].w*maps[i][d]; }
+      if(ok) retMap[d]=r;
     });
+    var dates=Object.keys(retMap).sort();
+    var today=dateStr(new Date()), d=null;
+    for(var i=0;i<dates.length;i++){ if(dates[i]<today && (d===null||dates[i]>d)) d=dates[i]; }   // 最近一个已收盘交易日
+    if(!d) return null;
+    return { pct:retMap[d], date:d, items:parts.map(function(p,i){ return {name:datas[i].name, pct:maps[i][d], w:p.w, date:d}; }) };
+  }
+  // us: getUS 结果或 null；live: {secid:{name,pct}|null}；nowMin: 当前分钟数
+  function compute(us, live, principal, applied, today, nowMin){
+    var rows={
+      rx:{ vkey:'vx', pct: us?us.pct:null,                                                              key: us?us.date:null, gate:true },          // 美股最近收盘，随时最终
+      ry:{ vkey:'vy', pct: (live['2.931157']&&live['0.980092'])?(0.5*live['2.931157'].pct+0.5*live['0.980092'].pct):null, key:today, gate:nowMin>=970 }, // 红利含港股 → 16:10 港股收市竞价后
+      rz:{ vkey:'vz', pct: live['118.AU9999']?live['118.AU9999'].pct:null,                               key:today, gate:nowMin>=930 }  // 黄金 15:30 收盘
+    };
+    var out={ bal:Object.assign({},principal), applied:Object.assign({},applied),
+              perPct:{}, perProfit:{}, total:0, banked:false };
+    ['rx','ry','rz'].forEach(function(rk){
+      var r=rows[rk]; out.perPct[rk]=r.pct;
+      if(r.pct==null){ out.perProfit[rk]=null; return; }
+      var P=out.bal[r.vkey];
+      if(P==null){ out.perProfit[rk]=0; return; }
+      var ap=out.applied[rk];
+      if(ap && ap.d===r.key){                       // 当天已并入
+        out.perProfit[rk]= (ap.p!=null) ? ap.p : round2(P*10000*(r.pct/100));  // 已知用记账值；迁移未知则按现价估，不重复并入
+      }else if(r.gate){                             // 已收盘(或美股最近收盘) → 现在并入本金
+        var profit=round2(P*10000*(r.pct/100));
+        out.bal[r.vkey]=round2(P+profit/10000);
+        out.applied[rk]={d:r.key, p:profit};
+        out.perProfit[rk]=profit; out.banked=true;
+      }else{                                        // 盘中未收盘 → 实时估算，不动本金
+        out.perProfit[rk]=round2(P*10000*(r.pct/100));
+      }
+      out.total+=out.perProfit[rk]||0;
+    });
+    out.total=round2(out.total);
     return out;
   }
 
@@ -325,34 +324,21 @@
     el.innerHTML='<span class="err">✕ '+(msg||'获取失败')+'</span>';
   }
 
-  function renderResult(r){
+  function renderHero(out, allFinal){
     var sumBal=0; ['vx','vy','vz'].forEach(function(v){ if(bal[v]!=null) sumBal+=bal[v]; });
-    var t=r.today||0;
+    var t=out.total||0;
     var hero=$('total'); hero.className='amt '+cls(t); hero.innerHTML=signed(t)+'<span class="unit">元</span>';
     var rate= sumBal>0 ? t/(sumBal*100) : 0;
     $('rate').textContent=(rate>0?'+':'')+fmt(rate)+'%';
     $('rateBadge').querySelector('span:last-child').className=cls(rate);
     $('rateBadge').querySelector('.dot').className='dot '+bgcls(rate);
-    function setb(id,v){ v=v||0; var e=$(id); e.textContent=signed(v); e.className='v '+cls(v); }
-    var bk=r.breakdown||{}; setb('bx',bk.vx); setb('by',bk.vy); setb('bz',bk.vz);
-    var s=$('since');
-    if(r.gap && r.since){
-      s.classList.add('show');
-      s.innerHTML='自 '+r.since+' 以来累计 <span class="v '+cls(r.cum)+'">'+signed(r.cum)+' 元</span> · 已并入本金'+(r.days?'（约'+r.days+'个交易日）':'');
-    }else{ s.classList.remove('show'); s.innerHTML=''; }
-  }
-
-  function renderRealtime(total, pcts, intraday){
-    var sumBal=0; ['vx','vy','vz'].forEach(function(v){ if(bal[v]!=null) sumBal+=bal[v]; });
-    var el=$('rtTotal'); el.className='amt '+cls(total); el.innerHTML=signed(total)+'<span class="unit">元</span>';
-    var rate=sumBal>0?total/(sumBal*100):0;
-    $('rtRate').textContent=(rate>0?'+':'')+fmt(rate)+'%';
-    $('rtBadge').querySelector('span:last-child').className=cls(rate);
-    $('rtBadge').querySelector('.dot').className='dot '+bgcls(rate);
-    function setb(id,v){ v=v||0; var e=$(id); if(e){ e.textContent=signed(v); e.className='v '+cls(v); } }
-    setb('bx',(bal.vx||0)*100*pcts.rx); setb('by',(bal.vy||0)*100*pcts.ry); setb('bz',(bal.vz||0)*100*pcts.rz);
-    function seg(nm,v,tag){ return nm+' <span class="'+cls(v)+'">'+(v>0?'+':'')+fmt(v)+'%</span> <span style="color:var(--faint)">'+tag+'</span>'; }
-    $('rtSub').innerHTML = seg('美股',pcts.rx,'收盘')+' &nbsp;·&nbsp; '+seg('红利',pcts.ry,intraday?'盘中':'收盘')+' &nbsp;·&nbsp; '+seg('黄金',pcts.rz,intraday?'盘中':'收盘');
+    function setb(id,v){ var e=$(id); if(v==null){ e.textContent='—'; e.className='v flat'; return; } e.textContent=signed(v); e.className='v '+cls(v); }
+    var bk=out.perProfit||{}; setb('bx',bk.rx); setb('by',bk.ry); setb('bz',bk.rz);
+    function seg(nm,p){ if(p==null) return nm+' <span style="color:var(--faint)">—</span>'; return nm+' <span class="'+cls(p)+'">'+(p>0?'+':'')+fmt(p)+'%</span>'; }
+    var pp=out.perPct||{};
+    var line1=seg('美股',pp.rx)+' &nbsp;·&nbsp; '+seg('红利',pp.ry)+' &nbsp;·&nbsp; '+seg('黄金',pp.rz);
+    var status= allFinal ? '收盘 · 已并入本金' : '盘中估算 · 收盘后并入（红利含港股，约16:10）';
+    $('sub').innerHTML = line1 + '<br><span style="color:var(--faint)">'+status+'</span>';
   }
 
   var busy=false;
@@ -361,52 +347,48 @@
   async function autoFetch(){
     if(busy) return; busy=true;
     var btn=$('fetchBtn'); btn.classList.add('loading'); btn.disabled=true;
-    $('fetchStatus').textContent='正在获取并结算…';
+    $('fetchStatus').textContent='正在获取…';
     var log=mkLog();
     var today=dateStr(new Date());
-    var now=new Date(); var todayComplete=(now.getHours()*60+now.getMinutes())>=930; // 15:30
+    var now=new Date(); var nowMin=now.getHours()*60+now.getMinutes();
+    var goldClosed=nowMin>=930;      // 15:30 黄金
+    var hkClosed=nowMin>=970;        // 16:10 港股收市竞价后 → 红利全收盘
+    var allFinal=hkClosed;           // 三块都定盘
 
-    var secids=[]; ['rx','ry','rz'].forEach(function(k){ FEEDS[k].parts.forEach(function(p){ secids.push(p.secid); }); });
-    var results={};
-    await Promise.all(secids.map(async function(sid){ try{ results[sid]=await fetchK(sid, log); }catch(e){ results[sid]=null; } }));
+    var usIds=['105.QQQ','107.VOO'];
+    var liveIds=['2.931157','0.980092','118.AU9999'];
+    var kres={}, live={};
+    await Promise.all([
+      Promise.all(usIds.map(async function(sid){ try{ kres[sid]=await fetchK(sid, log); }catch(e){ kres[sid]=null; } })),
+      Promise.all(liveIds.map(async function(sid){ try{ live[sid]=await fetchLive(sid, log); }catch(e){ live[sid]=null; } }))
+    ]);
+    var us=getUS(kres);
 
-    var out=settleAll(results, bal, applied, today, todayComplete);
+    var out=compute(us, live, bal, applied, today, nowMin);
     bal=out.bal; applied=out.applied; saveJSON(BAL,bal); saveJSON(APP,applied);
 
-    ['rx','ry','rz'].forEach(function(rk){
-      if(out.srcItems[rk]){ $(rk).value=fmt(out.rowPct[rk]); showSrc(rk, out.srcItems[rk]); }
-      else { showErr(rk); }
-    });
+    /* 今日行情 */
+    if(us){ $('rx').value=fmt(us.pct); showSrc('rx', us.items); } else { showErr('rx'); }
+    var tagRy = hkClosed?'收盘':'盘中', tagRz = goldClosed?'收盘':'盘中';
+    if(live['2.931157']&&live['0.980092']){
+      $('ry').value=fmt(out.perPct.ry);
+      showSrc('ry',[{name:live['2.931157'].name,pct:live['2.931157'].pct,w:0.5,tag:tagRy},
+                    {name:live['0.980092'].name,pct:live['0.980092'].pct,w:0.5,tag:tagRy}]);
+    } else { showErr('ry'); }
+    if(live['118.AU9999']){
+      $('rz').value=fmt(out.perPct.rz);
+      showSrc('rz',[{name:live['118.AU9999'].name,pct:live['118.AU9999'].pct,w:1,tag:tagRz}]);
+    } else { showErr('rz'); }
+
     ['vx','vy','vz'].forEach(function(v){ if(bal[v]!=null) $(v).value=bal[v].toFixed(2); });
 
-    var t=new Date(), tm=pad(t.getHours())+':'+pad(t.getMinutes());
-    if(out.maxDays===0 && meta.lastResult){
-      renderResult(meta.lastResult);
-      $('fetchStatus').textContent='今日已结算 · 未重复累加 · '+tm;
-    }else{
-      var result={ today:out.totalToday, cum:out.totalCum, since:meta.lastSettle,
-                   gap: out.maxDays>1, days: out.maxDays, breakdown: out.breakdown };
-      meta.lastSettle=today; meta.lastResult=result; saveJSON(META,meta);
-      renderResult(result);
-      $('fetchStatus').textContent=(out.fails.length?'部分失败，见诊断':'已更新')+' · '+tm;
-    }
-    /* ===== 今日实时收益（盘中查看，不动余额）===== */
-    var liveIds=['2.931157','0.980092','118.AU9999'], live={};
-    await Promise.all(liveIds.map(async function(sid){ try{ live[sid]=await fetchLive(sid, log); }catch(e){ live[sid]=null; } }));
-    var rxLive = out.rowPct.rx!=null ? out.rowPct.rx : 0;                          // 美股：最近一个交易日收盘
-    var ryLive = (live['2.931157']&&live['0.980092']) ? (0.5*live['2.931157'].pct+0.5*live['0.980092'].pct) : (out.rowPct.ry!=null?out.rowPct.ry:0);
-    var rzLive = live['118.AU9999'] ? live['118.AU9999'].pct : (out.rowPct.rz!=null?out.rowPct.rz:0);
-    var rtTotal = (bal.vx||0)*100*rxLive + (bal.vy||0)*100*ryLive + (bal.vz||0)*100*rzLive;
-    renderRealtime(rtTotal, {rx:rxLive, ry:ryLive, rz:rzLive}, !todayComplete);
-    if(live['2.931157']&&live['0.980092']){
-      $('ry').value=fmt(ryLive);
-      showSrc('ry',[{name:live['2.931157'].name,pct:live['2.931157'].pct,w:0.5,tag:todayComplete?'收盘':'盘中'},
-                    {name:live['0.980092'].name,pct:live['0.980092'].pct,w:0.5,tag:todayComplete?'收盘':'盘中'}]);
-    }
-    if(live['118.AU9999']){
-      $('rz').value=fmt(rzLive);
-      showSrc('rz',[{name:live['118.AU9999'].name,pct:live['118.AU9999'].pct,w:1,tag:todayComplete?'收盘':'盘中'}]);
-    }
+    renderHero(out, allFinal);
+    meta.lastResult={ total:out.total, perProfit:out.perProfit, perPct:out.perPct, postClose:allFinal };
+    saveJSON(META, meta);
+
+    var anyFail = !us || !(live['2.931157']&&live['0.980092']) || !live['118.AU9999'];
+    var tm=pad(now.getHours())+':'+pad(now.getMinutes());
+    $('fetchStatus').textContent=(anyFail?'部分获取失败，见诊断':(allFinal?'已更新 · 收盘并入本金':'已更新 · 盘中估算'))+' · '+tm;
 
     btn.classList.remove('loading'); btn.disabled=false; busy=false;
   }
@@ -424,8 +406,8 @@
 
   /* 初始化 */
   ['vx','vy','vz'].forEach(function(v){ if(bal[v]!=null) $(v).value=bal[v].toFixed(2); });
-  if(meta.lastResult) renderResult(meta.lastResult);
-  autoFetch();   // 打开即自动获取并结算（幂等）
+  if(meta.lastResult) renderHero({ total:meta.lastResult.total, perProfit:meta.lastResult.perProfit||{}, perPct:meta.lastResult.perPct||{} }, meta.lastResult.postClose);
+  autoFetch();   // 打开即自动获取（盘后并入本金，幂等）
 })();
 </script>
 </body>
