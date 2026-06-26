@@ -155,6 +155,31 @@
     <input type="file" id="impFile" accept="application/json,.json" style="display:none">
   </div>
 
+  <details class="cats" id="syncBox">
+    <summary><span>☁ 云同步</span><span class="mono" id="syncSummary">未开启 ▾</span></summary>
+    <div style="padding:6px 2px 2px">
+      <div id="syncStatus" style="font-size:12px;color:var(--muted);margin:2px 0 11px;line-height:1.5">数据默认只存本机。开启后自动同步到云端，换设备 / 清缓存也不丢。</div>
+      <div id="syncOn">
+        <button class="btn primary" id="syncEnableBtn" style="width:100%;margin-bottom:9px">在本设备开启云同步</button>
+        <div style="display:flex;gap:6px">
+          <input id="syncCode" placeholder="或粘贴已有同步码来连接" style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--ink);font-size:13px;outline:none">
+          <button class="btn ghost" id="syncConnectBtn">连接</button>
+        </div>
+      </div>
+      <div id="syncPanel" style="display:none">
+        <div style="font-size:11px;color:var(--faint);margin-bottom:6px">同步码（你的私密钥匙，抄到其他设备即可同步 · 勿外传）</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:9px">
+          <code id="syncCodeShow" style="flex:1;min-width:0;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:11px;color:var(--gold)">—</code>
+          <button class="btn ghost" id="syncCopyBtn">复制</button>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn ghost" id="syncNowBtn" style="flex:1">立即同步</button>
+          <button class="btn ghost" id="syncOffBtn" style="flex:1">关闭同步</button>
+        </div>
+      </div>
+    </div>
+  </details>
+
   <details class="cats">
     <summary><span>各分类小计</span><span class="mono" id="catCount">展开 ▾</span></summary>
     <div id="catBody"></div>
@@ -171,7 +196,7 @@
     </div>
   </div>
 
-  <p class="note">点卡片可编辑/填实际价 · 横向拖动可在两列间移动 · 数据存本机，记得偶尔「导出」备份</p>
+  <p class="note">点卡片可编辑/填实际价 · 横向拖动可在两列间移动 · 开「云同步」可跨设备自动同步，否则数据只存本机</p>
 </div>
 
 <div class="modal-bg" id="modalBg">
@@ -208,11 +233,93 @@
   var editingId=null, formStatus='plan';
   var UIKEY='reno_ui_v1';
   var collapsed={};
+  var SYNC_KEY='reno_sync_v1';
+  var BLOB_API='https://jsonblob.com/api/jsonBlob';
+  var sync={ id:null };
+  var pushTimer=null, pushing=false;
   function loadUI(){ try{ var c=JSON.parse(localStorage.getItem(UIKEY)); if(c) collapsed=c; }catch(e){} }
   function saveUI(){ try{ localStorage.setItem(UIKEY, JSON.stringify(collapsed)); }catch(e){} }
 
   function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&Array.isArray(s.items)) state=s; }catch(e){} }
-  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+  function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+  function save(){ saveLocal(); schedulePush(); }
+
+  /* ===== 云同步（JSONBlob · 免注册）===== */
+  function loadSync(){ try{ var c=JSON.parse(localStorage.getItem(SYNC_KEY)); if(c&&c.id) sync=c; }catch(e){} }
+  function saveSync(){ try{ localStorage.setItem(SYNC_KEY, JSON.stringify(sync)); }catch(e){} }
+  function blobUrl(id){ return BLOB_API+'/'+id; }
+  function payload(){ return { v:1, items:state.items, cap:state.cap, updatedAt:Date.now() }; }
+  function timeStr(){ var d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+  function setSyncStatus(s){ var e=$('syncStatus'); if(e) e.textContent=s; }
+  function applyCloud(d){
+    if(d && Array.isArray(d.items)){ state={ items:d.items, cap:(d.cap==null?null:d.cap) }; saveLocal(); }
+  }
+  async function cloudCreate(){
+    var res=await fetch(BLOB_API,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload())});
+    if(res.status!==201 && !res.ok) throw new Error('创建失败 '+res.status);
+    var id=res.headers.get('X-jsonblob');
+    if(!id){ var loc=res.headers.get('Location'); if(loc) id=loc.split('/').filter(Boolean).pop(); }
+    if(!id) throw new Error('未取得同步码（浏览器读不到返回头）');
+    return id;
+  }
+  async function cloudPull(id){
+    var res=await fetch(blobUrl(id),{headers:{'Accept':'application/json'},cache:'no-store'});
+    if(res.status===404) throw new Error('同步码不存在');
+    if(!res.ok) throw new Error('读取失败 '+res.status);
+    return await res.json();
+  }
+  async function cloudPush(id){
+    var res=await fetch(blobUrl(id),{method:'PUT',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload())});
+    if(!res.ok) throw new Error('上传失败 '+res.status);
+    return true;
+  }
+  function schedulePush(){
+    if(!sync.id) return;
+    setSyncStatus('待同步…');
+    clearTimeout(pushTimer); pushTimer=setTimeout(doPush, 1500);
+  }
+  async function doPush(){
+    if(!sync.id||pushing) return; pushing=true;
+    try{ await cloudPush(sync.id); sync.last=Date.now(); saveSync(); setSyncStatus('已同步 · '+timeStr()); }
+    catch(e){ setSyncStatus('同步失败：'+e.message+'（数据已存本机）'); }
+    pushing=false;
+  }
+  async function initialPull(){
+    if(!sync.id) return;
+    setSyncStatus('正在拉取云端…');
+    try{ var d=await cloudPull(sync.id); applyCloud(d); $('cap').value=state.cap==null?'':state.cap; render(); sync.last=Date.now(); saveSync(); setSyncStatus('已同步 · '+timeStr()); }
+    catch(e){ setSyncStatus('拉取失败（暂用本机数据）：'+e.message); }
+  }
+  async function enableSync(){
+    setSyncStatus('正在开启…');
+    try{ var id=await cloudCreate(); sync={id:id,last:Date.now()}; saveSync(); renderSyncUI(); setSyncStatus('已开启 · '+timeStr()); toast('云同步已开启'); }
+    catch(e){ setSyncStatus('开启失败：'+e.message); toast('开启失败'); }
+  }
+  async function connectSync(){
+    var code=($('syncCode').value||'').trim();
+    if(code.indexOf('/')>=0) code=code.split('/').filter(Boolean).pop();
+    if(!code){ toast('请输入同步码'); return; }
+    if(state.items.length && !confirm('连接后将用云端数据覆盖本机当前账本，确定？')) return;
+    setSyncStatus('正在连接…');
+    try{ var d=await cloudPull(code); sync={id:code,last:Date.now()}; saveSync(); applyCloud(d); $('cap').value=state.cap==null?'':state.cap; render(); renderSyncUI(); setSyncStatus('已连接 · '+timeStr()); toast('已连接并拉取'); }
+    catch(e){ setSyncStatus('连接失败：'+e.message); toast('连接失败'); }
+  }
+  function disableSync(){ sync={id:null}; saveSync(); renderSyncUI(); setSyncStatus('已关闭（数据仍在本机）'); toast('已关闭云同步'); }
+  function copyCode(){
+    if(!sync.id){ toast('未开启'); return; }
+    var t=sync.id;
+    function ok(){ toast('同步码已复制'); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok,function(){fallbackCopy(t,ok);}); }
+    else fallbackCopy(t,ok);
+  }
+  function fallbackCopy(t,ok){ var i=document.createElement('textarea'); i.value=t; i.style.position='fixed'; i.style.opacity='0'; document.body.appendChild(i); i.select(); try{ document.execCommand('copy'); ok(); }catch(e){ toast('复制失败，请手动选取'); } i.remove(); }
+  function renderSyncUI(){
+    var on=!!sync.id;
+    $('syncOn').style.display = on?'none':'';
+    $('syncPanel').style.display = on?'':'none';
+    $('syncSummary').textContent = (on?'已开启':'未开启')+' ▾';
+    if(on) $('syncCodeShow').textContent=sync.id;
+  }
   function uid(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
   function num(v){ if(v===''||v==null) return null; var x=parseFloat(v); return isNaN(x)?null:x; }
   function money(n){ if(n==null||isNaN(n)) return '—'; return '¥'+Number(n).toLocaleString('zh-CN',{maximumFractionDigits:2}); }
@@ -432,9 +539,18 @@
     r.readAsText(f); e.target.value='';
   });
 
+  $('syncEnableBtn').addEventListener('click', enableSync);
+  $('syncConnectBtn').addEventListener('click', connectSync);
+  $('syncCopyBtn').addEventListener('click', copyCode);
+  $('syncNowBtn').addEventListener('click', function(){ setSyncStatus('正在同步…'); doPush(); });
+  $('syncOffBtn').addEventListener('click', disableSync);
+
+  loadSync();
   load(); loadUI();
   $('cap').value = state.cap==null?'':state.cap;
   render();
+  renderSyncUI();
+  initialPull();
 })();
 </script>
 </body>
