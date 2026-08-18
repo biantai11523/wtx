@@ -1,0 +1,18 @@
+[
+  { "meetingDate": "2026-01-28", "announcementDate": "2026-01-28", "label": "Jan 28" },
+  { "meetingDate": "2026-03-18", "announcementDate": "2026-03-18", "label": "Mar 18" },
+  { "meetingDate": "2026-04-29", "announcementDate": "2026-04-29", "label": "Apr 29" },
+  { "meetingDate": "2026-06-17", "announcementDate": "2026-06-17", "label": "Jun 17" },
+  { "meetingDate": "2026-07-29", "announcementDate": "2026-07-29", "label": "Jul 29" },
+  { "meetingDate": "2026-09-16", "announcementDate": "2026-09-16", "label": "Sep 16" },
+  { "meetingDate": "2026-10-28", "announcementDate": "2026-10-28", "label": "Oct 28" },
+  { "meetingDate": "2026-12-09", "announcementDate": "2026-12-09", "label": "Dec 9" },
+  { "meetingDate": "2027-01-27", "announcementDate": "2027-01-27", "label": "Jan 27" },
+  { "meetingDate": "2027-03-17", "announcementDate": "2027-03-17", "label": "Mar 17" },
+  { "meetingDate": "2027-04-28", "announcementDate": "2027-04-28", "label": "Apr 28" },
+  { "meetingDate": "2027-06-09", "announcementDate": "2027-06-09", "label": "Jun 9" },
+  { "meetingDate": "2027-07-28", "announcementDate": "2027-07-28", "label": "Jul 28" },
+  { "meetingDate": "2027-09-15", "announcementDate": "2027-09-15", "label": "Sep 15" },
+  { "meetingDate": "2027-10-27", "announcementDate": "2027-10-27", "label": "Oct 27" },
+  { "meetingDate": "2027-12-08", "announcementDate": "2027-12-08", "label": "Dec 8" }
+]

@@ -1,0 +1,60 @@
+name: Refresh FedPath community fallback
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fedpath-community-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install public-source client
+        run: python -m pip install --disable-pip-version-check -r qsl/fedpath/scripts/requirements-community.txt
+
+      - name: Refresh isolated community snapshot
+        run: >-
+          python qsl/fedpath/scripts/refresh-fedwatch-community.py
+          --calendar qsl/fedpath/data/import/fomc-calendar.json
+          --output qsl/fedpath/data/fedwatch-community-current.json
+          --manifest qsl/fedpath/data/fedwatch-community-current-manifest.json
+
+      - name: Commit only community fallback data
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- \
+            qsl/fedpath/data/fedwatch-community-current.json \
+            qsl/fedpath/data/fedwatch-community-current-manifest.json
+          unexpected="$(git diff --cached --name-only | grep -Ev '^qsl/fedpath/data/fedwatch-community-current(-manifest)?\.json$' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected staged path(s):"
+            echo "$unexpected"
+            exit 1
+          fi
+          if git diff --cached --quiet; then
+            echo "No community snapshot change."
+            exit 0
+          fi
+          git commit -m "Refresh FedPath community fallback"
+          git push origin HEAD:main
