@@ -28,4 +28,7 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Read rendered public iframe
-        run: node "$GITHUB_WORKSPACE/qsl/fedpath/scripts/probe-cme-anonymous.mjs"
+        run: |
+          cp "$GITHUB_WORKSPACE/qsl/fedpath/scripts/probe-cme-anonymous.mjs" /tmp/cme-fedwatch-probe/probe.mjs
+          cd /tmp/cme-fedwatch-probe
+          node probe.mjs
