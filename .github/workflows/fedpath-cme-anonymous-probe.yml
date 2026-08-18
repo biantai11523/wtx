@@ -1,0 +1,31 @@
+name: Probe anonymous CME FedWatch render
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Playwright and Chromium
+        run: |
+          mkdir -p /tmp/cme-fedwatch-probe
+          cd /tmp/cme-fedwatch-probe
+          npm init -y
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Read rendered public iframe
+        run: node "$GITHUB_WORKSPACE/qsl/fedpath/scripts/probe-cme-anonymous.mjs"
