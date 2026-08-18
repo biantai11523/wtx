@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "fedpath.fedwatch-web-rendered-manifest.v1",
+  "snapshot_id": "fedwatch-web-current-20260818021502",
+  "source_url": "https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html",
+  "page_as_of": "2026-08-17 08:59:16 CT",
+  "retrieved_at": "2026-08-18T02:15:02.154Z",
+  "quality_mode": "exploratory_web_rendered",
+  "strict_pit": false,
+  "status": "available",
+  "stale_after": "2026-08-19",
+  "source_kind": "rendered_page",
+  "extraction_method": "visible_iframe_text",
+  "iframe_selector": "#cmeIframe-jtxelq2f",
+  "runtime_automation": false,
+  "input_artifact": "C:\\Users\\王庭轩\\Desktop\\ai coding\\quant_strategy_lab\\qsl\\fedpath\\data\\private\\fedwatch-web-current-20260818.rendered.txt",
+  "input_sha256": "b14be448c65cec8d69a915581ce3ecd644718255a0dfd7e1d020e73732c754df",
+  "output_sha256": "54531c55fa290fb189fba4548abc073642890e27360b4780ea351c1e458f4233",
+  "warning": "Exploratory rendered-page capture only. Not a CME API response, not strict PIT, not a continuous real-time feed, and not merged into the official policy snapshot."
+}

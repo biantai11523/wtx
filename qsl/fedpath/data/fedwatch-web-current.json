@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "fedpath.fedwatch-web-current.v1",
+  "snapshot_id": "fedwatch-web-current-20260818021502",
+  "page_as_of": "2026-08-17 08:59:16 CT",
+  "retrieved_at": "2026-08-18T02:15:02.154Z",
+  "source_url": "https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html",
+  "source_kind": "rendered_page",
+  "source_label": "CME FedWatch rendered page",
+  "quality_mode": "exploratory_web_rendered",
+  "strict_pit": false,
+  "status": "available",
+  "stale_after": "2026-08-19",
+  "meeting": {
+    "meeting_date": "2026-09-16",
+    "contract": "ZQU6",
+    "contract_expires": "2026-09-30",
+    "mid_price": 96.3275,
+    "target_range": {
+      "lower_bps": 350,
+      "upper_bps": 375
+    },
+    "ease": 0,
+    "no_change": 0.65,
+    "hike": 0.35
+  },
+  "lookback": {
+    "1d": {
+      "as_of": "14 8月 2026",
+      "probabilities": [
+        {
+          "target_range": {
+            "lower_bps": 350,
+            "upper_bps": 375
+          },
+          "probability": 0.669
+        },
+        {
+          "target_range": {
+            "lower_bps": 375,
+            "upper_bps": 400
+          },
+          "probability": 0.331
+        },
+        {
+          "target_range": {
+            "lower_bps": 400,
+            "upper_bps": 425
+          },
+          "probability": 0
+        }
+      ]
+    },
+    "1w": {
+      "as_of": "10 8月 2026",
+      "probabilities": [
+        {
+          "target_range": {
+            "lower_bps": 350,
+            "upper_bps": 375
+          },
+          "probability": 0.478
+        },
+        {
+          "target_range": {
+            "lower_bps": 375,
+            "upper_bps": 400
+          },
+          "probability": 0.522
+        },
+        {
+          "target_range": {
+            "lower_bps": 400,
+            "upper_bps": 425
+          },
+          "probability": 0
+        }
+      ]
+    },
+    "1m": {
+      "as_of": "17 7月 2026",
+      "probabilities": [
+        {
+          "target_range": {
+            "lower_bps": 350,
+            "upper_bps": 375
+          },
+          "probability": 0.42200000000000004
+        },
+        {
+          "target_range": {
+            "lower_bps": 375,
+            "upper_bps": 400
+          },
+          "probability": 0.512
+        },
+        {
+          "target_range": {
+            "lower_bps": 400,
+            "upper_bps": 425
+          },
+          "probability": 0.066
+        }
+      ]
+    }
+  },
+  "extraction": {
+    "method": "visible_iframe_text",
+    "iframe_selector": "#cmeIframe-jtxelq2f",
+    "not_api": true,
+    "note": "Captured from the rendered QuikStrike iframe body text; this is not a CME API response and is not a runtime data feed."
+  }
+}

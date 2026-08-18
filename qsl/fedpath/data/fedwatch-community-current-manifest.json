@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "fedpath.fedwatch-current-manifest.v1",
+  "snapshot_id": "fedwatch-community-current-2026-08-14",
+  "source_kind": "community_zq",
+  "source_url": "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/305/FUT",
+  "observation_as_of": "2026-08-14",
+  "retrieved_at": "2026-08-18T03:29:40Z",
+  "quality_mode": "exploratory_zq_approximation",
+  "strict_pit": false,
+  "status": "stale",
+  "stale_after": "2026-08-17",
+  "input_artifact": "C:\\Users\\王庭轩\\Desktop\\ai coding\\quant_strategy_lab\\qsl\\fedpath\\data\\private\\community-market-snapshot-current-20260818.json",
+  "input_sha256": "0d2de00515aefeac2f4a345a13db5c2c67fec754a5828efe6f9c9b4f8c3b3246",
+  "output_sha256": "61d21dc3212d686be5046e52d48c6462c31b9b6fb44284a38bebe7f8bba3bd84",
+  "fallback": "Retain the last static snapshot when the community endpoint fails; the UI marks it stale after stale_after.",
+  "warning": "Derived from public ZQ settlement data and the local FOMC calendar. This is not the official CME FedWatch/QuikStrike probability and is not strict PIT."
+}

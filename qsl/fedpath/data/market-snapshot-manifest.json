@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "fedpath.market-snapshot-manifest.v1",
+  "snapshotId": "live-2026-08-17",
+  "cutoffDate": "2026-08-18",
+  "asOf": "2026-08-17",
+  "retrievedAt": "2026-08-18T01:27:04.913Z",
+  "status": "live",
+  "actualPolicy": {
+    "effrSource": "NY Fed EFFR",
+    "targetRangeSource": "FRED DFEDTARU / DFEDTARL",
+    "strictPIT": false,
+    "note": "Build-time official-source snapshot; publication timing is retained through source as-of dates."
+  },
+  "marketImplied": {
+    "status": "unavailable",
+    "officialFedWatchApi": false,
+    "futuresRows": 0,
+    "meetingSnapshotRows": 0,
+    "note": "No legal/approved ZQ or CME FedWatch input was supplied; no probabilities were generated."
+  },
+  "sources": [
+    {
+      "id": "nyfed-effr",
+      "label": "Federal Reserve Bank of New York EFFR",
+      "url": "https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=2015-01-01&endDate=2026-08-18",
+      "asOf": "2026-08-14",
+      "retrievedAt": "2026-08-18T01:27:04.913Z",
+      "status": "live"
+    },
+    {
+      "id": "fred-target-range",
+      "label": "FRED DFEDTARU / DFEDTARL",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv",
+      "asOf": "2026-08-17",
+      "retrievedAt": "2026-08-18T01:27:04.913Z",
+      "status": "live",
+      "note": "FRED public CSV observations; no API key was supplied."
+    },
+    {
+      "id": "market-implied-unavailable",
+      "label": "CME FedWatch / ZQ market-implied path",
+      "url": "https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html",
+      "status": "stale",
+      "note": "No legal/approved ZQ or CME FedWatch input was supplied; market-implied probabilities remain unavailable."
+    }
+  ]
+}
