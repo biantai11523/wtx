@@ -5,7 +5,7 @@
   "source_url": "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/305/FUT",
   "fred_url": "https://fred.stlouisfed.org/graph/fredgraph.csv",
   "observation_as_of": "2026-08-20",
-  "retrieved_at": "2026-08-21T18:57:31Z",
+  "retrieved_at": "2026-08-22T01:51:13Z",
   "quality_mode": "exploratory_zq_approximation",
   "strict_pit": false,
   "status": "available",
@@ -15,5 +15,5 @@
   "warning": "Derived from public CME ZQ settlement data, public FRED observations, and the checked-in FOMC calendar. Not official CME FedWatch/QuikStrike; not an API response and not strict PIT.",
   "official_fedwatch_api": false,
   "last_good_snapshot": true,
-  "output_sha256": "89ab1998fce98cf4fe57fa66fac0fca9745a68ae56fa5b542f70cef3e0b2500a"
+  "output_sha256": "fdbfec0a78d2b364820bd3c4fea23dde71a35cca4475a887d66d338993a16f22"
 }
