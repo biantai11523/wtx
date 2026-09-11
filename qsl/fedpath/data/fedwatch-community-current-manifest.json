@@ -1,19 +1,19 @@
 {
   "schemaVersion": "fedpath.fedwatch-current-manifest.v1",
-  "snapshot_id": "fedwatch-community-current-2026-09-09",
+  "snapshot_id": "fedwatch-community-current-2026-09-10",
   "source": "public CME ZQ settlement + public FRED CSV",
   "source_url": "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/305/FUT",
   "fred_url": "https://fred.stlouisfed.org/graph/fredgraph.csv",
-  "observation_as_of": "2026-09-09",
-  "retrieved_at": "2026-09-11T04:43:14Z",
+  "observation_as_of": "2026-09-10",
+  "retrieved_at": "2026-09-11T11:24:06Z",
   "quality_mode": "exploratory_zq_approximation",
   "strict_pit": false,
   "status": "available",
-  "stale_after": "2026-09-12",
+  "stale_after": "2026-09-13",
   "current_effr_observation": "2026-09-09",
-  "target_range_observation": "2026-09-09",
+  "target_range_observation": "2026-09-10",
   "warning": "Derived from public CME ZQ settlement data, public FRED observations, and the checked-in FOMC calendar. Not official CME FedWatch/QuikStrike; not an API response and not strict PIT.",
   "official_fedwatch_api": false,
   "last_good_snapshot": true,
-  "output_sha256": "737bd3d969a57109458a5661ac9d17a4364b9f1a06bf1e678d63207b35ef277f"
+  "output_sha256": "4517e694a77ddab447dcfeca8433d46249ba8f78c981945fc62a530afc9849c3"
 }
