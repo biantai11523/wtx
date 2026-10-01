@@ -2,7 +2,7 @@
   "schemaVersion": "fedpath.fedwatch-web-current.v2",
   "snapshot_id": "fedwatch-community-current-2026-09-30",
   "observation_as_of": "2026-09-30",
-  "retrieved_at": "2026-10-01T05:58:06Z",
+  "retrieved_at": "2026-10-01T13:19:22Z",
   "source_url": "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/305/FUT",
   "source_kind": "community_zq",
   "source_label": "Community ZQ settlement approximation",
