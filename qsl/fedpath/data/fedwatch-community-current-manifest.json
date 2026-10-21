@@ -16,7 +16,7 @@
   "official_fedwatch_api": false,
   "last_good_snapshot": true,
   "output_sha256": "768cc73f0ca7c471370ffaacd63eee40f01486166929a40245b8108cd4de09ac",
-  "refresh_attempted_at": "2026-10-21T17:14:08Z",
+  "refresh_attempted_at": "2026-10-21T21:44:25Z",
   "last_refresh_error": "FRED EFFR returned no numeric observations",
   "fallback": "Last successful community snapshot retained; no replacement data was written."
 }
