@@ -8,9 +8,9 @@
   "source_label": "Community ZQ settlement approximation",
   "quality_mode": "exploratory_zq_approximation",
   "strict_pit": false,
-  "status": "available",
+  "status": "stale",
   "stale_after": "2026-10-23",
-  "warning": "Derived from public CME ZQ settlement data, public FRED observations, and the checked-in FOMC calendar. Not official CME FedWatch/QuikStrike; not an API response and not strict PIT.",
+  "warning": "Derived from public CME ZQ settlement data, public FRED observations, and the checked-in FOMC calendar. Not official CME FedWatch/QuikStrike; not an API response and not strict PIT. Last automatic refresh failed: FRED EFFR returned no numeric observations",
   "meeting": {
     "meeting_date": "2026-10-28",
     "contract": "ZQV6",
@@ -22,5 +22,6 @@
     "ease": 0.0,
     "no_change": 0.8450000000000149,
     "hike": 0.15499999999998515
-  }
+  },
+  "refresh_error": "FRED EFFR returned no numeric observations"
 }

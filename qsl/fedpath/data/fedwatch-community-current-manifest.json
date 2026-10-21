@@ -8,12 +8,15 @@
   "retrieved_at": "2026-10-21T11:52:05Z",
   "quality_mode": "exploratory_zq_approximation",
   "strict_pit": false,
-  "status": "available",
+  "status": "stale",
   "stale_after": "2026-10-23",
   "current_effr_observation": "2026-10-19",
   "target_range_observation": "2026-10-20",
   "warning": "Derived from public CME ZQ settlement data, public FRED observations, and the checked-in FOMC calendar. Not official CME FedWatch/QuikStrike; not an API response and not strict PIT.",
   "official_fedwatch_api": false,
   "last_good_snapshot": true,
-  "output_sha256": "92289a05770951fabeaf49d6f92f858ab24840a8ce2cda143dae1628d736f004"
+  "output_sha256": "768cc73f0ca7c471370ffaacd63eee40f01486166929a40245b8108cd4de09ac",
+  "refresh_attempted_at": "2026-10-21T17:14:08Z",
+  "last_refresh_error": "FRED EFFR returned no numeric observations",
+  "fallback": "Last successful community snapshot retained; no replacement data was written."
 }
