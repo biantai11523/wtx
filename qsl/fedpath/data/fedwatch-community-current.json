@@ -1,16 +1,16 @@
 {
   "schemaVersion": "fedpath.fedwatch-web-current.v2",
-  "snapshot_id": "fedwatch-community-current-2026-10-20",
-  "observation_as_of": "2026-10-20",
-  "retrieved_at": "2026-10-21T11:52:05Z",
+  "snapshot_id": "fedwatch-community-current-2026-10-21",
+  "observation_as_of": "2026-10-21",
+  "retrieved_at": "2026-10-22T11:55:46Z",
   "source_url": "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/305/FUT",
   "source_kind": "community_zq",
   "source_label": "Community ZQ settlement approximation",
   "quality_mode": "exploratory_zq_approximation",
   "strict_pit": false,
-  "status": "stale",
-  "stale_after": "2026-10-23",
-  "warning": "Derived from public CME ZQ settlement data, public FRED observations, and the checked-in FOMC calendar. Not official CME FedWatch/QuikStrike; not an API response and not strict PIT. Last automatic refresh failed: Failed to perform, curl: (28) Operation timed out after 30002 milliseconds with 0 bytes received. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+  "status": "available",
+  "stale_after": "2026-10-24",
+  "warning": "Derived from public CME ZQ settlement data, public FRED observations, and the checked-in FOMC calendar. Not official CME FedWatch/QuikStrike; not an API response and not strict PIT.",
   "meeting": {
     "meeting_date": "2026-10-28",
     "contract": "ZQV6",
@@ -22,6 +22,5 @@
     "ease": 0.0,
     "no_change": 0.8450000000000149,
     "hike": 0.15499999999998515
-  },
-  "refresh_error": "Failed to perform, curl: (28) Operation timed out after 30002 milliseconds with 0 bytes received. See https://curl.se/libcurl/c/libcurl-errors.html first for more details."
+  }
 }
