@@ -1,26 +1,26 @@
 {
   "schemaVersion": "fedpath.fedwatch-web-current.v2",
-  "snapshot_id": "fedwatch-community-current-2026-10-23",
-  "observation_as_of": "2026-10-23",
-  "retrieved_at": "2026-10-26T22:41:31Z",
+  "snapshot_id": "fedwatch-community-current-2026-10-26",
+  "observation_as_of": "2026-10-26",
+  "retrieved_at": "2026-10-27T05:08:43Z",
   "source_url": "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/305/FUT",
   "source_kind": "community_zq",
   "source_label": "Community ZQ settlement approximation",
   "quality_mode": "exploratory_zq_approximation",
   "strict_pit": false,
   "status": "available",
-  "stale_after": "2026-10-26",
+  "stale_after": "2026-10-29",
   "warning": "Derived from public CME ZQ settlement data, public FRED observations, and the checked-in FOMC calendar. Not official CME FedWatch/QuikStrike; not an API response and not strict PIT.",
   "meeting": {
     "meeting_date": "2026-10-28",
     "contract": "ZQV6",
-    "mid_price": 96.1175,
+    "mid_price": 96.115,
     "target_range": {
       "lower_bps": 375,
       "upper_bps": 400
     },
     "ease": 0.0,
-    "no_change": 0.9003571428571071,
-    "hike": 0.0996428571428929
+    "no_change": 0.8892857142857515,
+    "hike": 0.11071428571424846
   }
 }
