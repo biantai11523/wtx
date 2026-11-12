@@ -5,15 +5,15 @@
   "source_url": "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/305/FUT",
   "fred_url": "https://fred.stlouisfed.org/graph/fredgraph.csv",
   "observation_as_of": "2026-11-11",
-  "retrieved_at": "2026-11-12T07:13:52Z",
+  "retrieved_at": "2026-11-12T19:56:21Z",
   "quality_mode": "exploratory_zq_approximation",
   "strict_pit": false,
   "status": "available",
   "stale_after": "2026-11-14",
-  "current_effr_observation": "2026-11-09",
+  "current_effr_observation": "2026-11-10",
   "target_range_observation": "2026-11-11",
   "warning": "Derived from public CME ZQ settlement data, public FRED observations, and the checked-in FOMC calendar. Not official CME FedWatch/QuikStrike; not an API response and not strict PIT.",
   "official_fedwatch_api": false,
   "last_good_snapshot": true,
-  "output_sha256": "e18ba75e96f411c79c5ba947dba5c0bdfff611a2112191107c74c5699d523931"
+  "output_sha256": "60b3f9cd4124c28fc9f4de1977f82e348020b9941216f78bae76aa84d4d701aa"
 }
